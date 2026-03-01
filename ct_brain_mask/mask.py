@@ -2,11 +2,13 @@
 CT Brain Mask — HU-threshold-based brain segmentation for CT and dynamic CT imaging.
 
 Algorithm:
-  1. Threshold baseline CT at brain parenchyma HU range (default 20-80 HU)
+  1. (Optional) Median filter to reduce noise and artifacts
+  2. Threshold baseline CT at brain parenchyma HU range (default 20-80 HU)
      - Excludes air (<0 HU), fat/CSF (<20 HU), bone/skull (>80 HU)
-  2. Fill holes (ventricles, sulci)
-  3. Keep only the largest connected component (the brain)
-  4. Final hole fill after component selection
+  3. (Optional) Morphological opening to remove small fragments
+  4. Fill holes (ventricles, sulci)
+  5. Keep only the largest connected component (the brain)
+  6. Final hole fill after component selection
 
 Dependencies: numpy, scipy.ndimage
 """

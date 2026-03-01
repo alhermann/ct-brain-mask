@@ -18,12 +18,16 @@ The [20, 80] HU window cleanly isolates brain parenchyma. Broader thresholds inc
 
 ## Algorithm
 
-1. **HU threshold** the baseline CT image at [20, 80] HU
+1. **(Optional) Median filter** — reduces noise and streak artifacts before thresholding (`median_size=3` to `7`)
+2. **HU threshold** the CT image at [20, 80] HU
    - Excludes air (< 0 HU), fat/CSF (< 20 HU), bone/skull (> 80 HU)
    - The 80 HU upper bound naturally separates parenchyma from skull — no morphological erosion needed
-2. **Binary hole filling** — recaptures ventricles, sulci, and internal CSF spaces
-3. **Largest connected component** — removes isolated fragments outside the brain
-4. **Final hole fill** — closes any remaining gaps after component selection
+3. **(Optional) Morphological opening** — removes small fragments from noise or artifacts (`opening=True`)
+4. **Binary hole filling** — recaptures ventricles, sulci, and internal CSF spaces
+5. **Largest connected component** — removes isolated fragments outside the brain
+6. **Final hole fill** — closes any remaining gaps after component selection
+
+Steps 1 and 3 are off by default (`median_size=None`, `opening=False`) to preserve backward compatibility. With default settings, only steps 2/4/5/6 run — identical to the original pipeline.
 
 ## Why HU 20–80?
 
