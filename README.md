@@ -2,11 +2,17 @@
 
 Simple, robust brain segmentation for non-contrast CT and dynamic CT images using Hounsfield Unit thresholding and morphological operations. No deep learning, no training data — just numpy and scipy.
 
-## Example: Brain Masking for Dynamic CT Analysis
+## Mask Comparison
 
-![Brain mask example — ISLES 2024](examples/brain_mask_isles24.png)
+![Brain mask comparison](examples/brain_mask_demo.png)
 
-*Perfusion data from the [ISLES 2024](https://isles-24.grand-challenge.org/) public dataset (sub-stroke0014, slice 37). Left to right: raw Tmax map, brain mask isolating brain tissue, masked Tmax, and lesion overlay. Brain masking enables per-voxel perfusion analysis by excluding non-brain tissue.*
+| Method | Voxels | Coverage | Skull included? |
+|--------|--------|----------|-----------------|
+| **HU [20, 80] (ours)** | 19,218 | 44.8% | No |
+| HU [20, 1300] | 25,270 | 58.9% | Yes |
+| HU > 0 | 25,478 | 59.4% | Yes |
+
+The [20, 80] HU window cleanly isolates brain parenchyma. Broader thresholds include skull and bone, which is problematic for perfusion analysis.
 
 ## Algorithm
 
@@ -49,7 +55,7 @@ pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://
 From source:
 
 ```bash
-git clone https://github.com/hermanndetz/ct-brain-mask.git
+git clone https://github.com/alhermann/ct-brain-mask.git
 cd ct-brain-mask
 pip install -e .
 ```

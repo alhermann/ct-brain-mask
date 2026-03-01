@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ct-brain-mask"
-version = "0.2.0"
+version = "0.3.2"
 description = "HU-threshold-based brain segmentation for CT and dynamic CT imaging"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.8"
 authors = [
-    { name = "Hermann Detz" },
+    { name = "Alexander Hermann" },
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
-keywords = ["ct", "brain", "mask", "segmentation", "dynamic-ct", "perfusion", "hounsfield", "medical-imaging", "isles"]
+keywords = ["ct", "brain", "mask", "segmentation", "dynamic-ct", "perfusion", "hounsfield", "medical-imaging"]
 dependencies = [
     "numpy",
     "scipy",
@@ -42,6 +42,6 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/hermanndetz/ct-brain-mask"
-Repository = "https://github.com/hermanndetz/ct-brain-mask"
-Issues = "https://github.com/hermanndetz/ct-brain-mask/issues"
+Homepage = "https://github.com/alhermann/ct-brain-mask"
+Repository = "https://github.com/alhermann/ct-brain-mask"
+Issues = "https://github.com/alhermann/ct-brain-mask/issues"

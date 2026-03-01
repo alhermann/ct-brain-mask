@@ -384,128 +384,92 @@ class TestWithDICOM:
 
 
 # ---------------------------------------------------------------------------
-# Tests with ISLES 2024 public NIfTI data (skipped if data not available)
+# Tests with public NIfTI CT data (skipped if data not available)
 # ---------------------------------------------------------------------------
 
-ISLES24_DIR = os.path.join(os.path.dirname(__file__),
-                           '..', 'examples', 'isles24_sample')
+NIFTI_CT_PATH = os.path.join(os.path.dirname(__file__),
+                              '..', 'examples', 'isles24_sample', 'brain_ct.nii.gz')
 
 
-def _have_isles24():
-    """Check if ISLES24 sample NIfTI files are available."""
-    return os.path.isfile(os.path.join(ISLES24_DIR, 'cbf.nii.gz'))
-
-
-@pytest.fixture
-def isles24_cbf():
-    """Load ISLES24 CBF map, slice 37."""
-    if not _have_isles24():
-        pytest.skip("ISLES24 sample data not available")
-    import nibabel as nib
-    data = nib.load(os.path.join(ISLES24_DIR, 'cbf.nii.gz')).get_fdata()
-    return data[:, :, 37]
+def _have_nifti_ct():
+    """Check if public CT NIfTI file is available."""
+    return os.path.isfile(NIFTI_CT_PATH)
 
 
 @pytest.fixture
-def isles24_tmax():
-    """Load ISLES24 Tmax map, slice 37."""
-    if not _have_isles24():
-        pytest.skip("ISLES24 sample data not available")
+def nifti_ct_slice():
+    """Load an axial slice from the public CT NIfTI (slice 157)."""
+    if not _have_nifti_ct():
+        pytest.skip("Public CT NIfTI not available")
     import nibabel as nib
-    data = nib.load(os.path.join(ISLES24_DIR, 'tmax.nii.gz')).get_fdata()
-    return data[:, :, 37]
+    data = nib.load(NIFTI_CT_PATH).get_fdata()
+    return np.rot90(data[:, :, 157])
 
 
-@pytest.fixture
-def isles24_lesion():
-    """Load ISLES24 lesion mask, slice 37."""
-    if not _have_isles24():
-        pytest.skip("ISLES24 sample data not available")
-    import nibabel as nib
-    data = nib.load(os.path.join(ISLES24_DIR, 'lesion.nii.gz')).get_fdata()
-    return data[:, :, 37]
+class TestWithNIfTICT:
+    """Tests using a public non-contrast CT brain scan (CT_Philips)."""
 
-
-class TestWithISLES24:
-    """Tests using ISLES 2024 public perfusion data."""
-
-    def test_isles24_files_loadable(self):
-        """All ISLES24 NIfTI files should be loadable."""
-        if not _have_isles24():
-            pytest.skip("ISLES24 sample data not available")
+    def test_nifti_ct_loadable(self):
+        """NIfTI CT file should be loadable with proper HU range."""
+        if not _have_nifti_ct():
+            pytest.skip("Public CT NIfTI not available")
         import nibabel as nib
-        for name in ['cbf', 'cbv', 'tmax', 'lesion']:
-            img = nib.load(os.path.join(ISLES24_DIR, f'{name}.nii.gz'))
-            data = img.get_fdata()
-            assert data.ndim == 3
-            assert data.shape[0] > 0
+        data = nib.load(NIFTI_CT_PATH).get_fdata()
+        assert data.ndim == 3
+        assert data.min() < -500, "CT should have air values"
+        assert data.max() > 500, "CT should have bone values"
 
-    def test_isles24_cbf_has_brain_region(self, isles24_cbf):
-        """CBF map should have a non-zero brain region."""
-        brain_region = isles24_cbf > 0
-        assert brain_region.sum() > 10000, "CBF should show brain perfusion"
+    def test_nifti_ct_mask_has_content(self, nifti_ct_slice):
+        """Brain mask from real CT NIfTI should have brain voxels."""
+        mask = create_brain_mask(nifti_ct_slice, verbose=False)
+        assert mask.dtype == bool
+        assert mask.shape == nifti_ct_slice.shape
+        assert mask.sum() > 5000
 
-    def test_isles24_tmax_has_data(self, isles24_tmax):
-        """Tmax map should have a meaningful value range."""
-        assert isles24_tmax.max() > 0, "Tmax should have positive values"
+    def test_nifti_ct_mask_reasonable_coverage(self, nifti_ct_slice):
+        """Brain should be 20-70% of the image."""
+        mask = create_brain_mask(nifti_ct_slice, verbose=False)
+        coverage = mask.sum() / mask.size
+        assert 0.20 < coverage < 0.70, f"Coverage {coverage:.1%} seems unreasonable"
 
-    def test_isles24_lesion_is_binary(self, isles24_lesion):
-        """Lesion mask should be binary (0 or 1)."""
-        unique = np.unique(isles24_lesion)
-        assert set(unique).issubset({0.0, 1.0})
+    def test_nifti_ct_skull_exclusion(self, nifti_ct_slice):
+        """HU [20,80] should have fewer voxels than [20,1300]."""
+        mask_brain = create_brain_mask(nifti_ct_slice, hu_min=20, hu_max=80,
+                                       verbose=False)
+        mask_with_skull = create_brain_mask(nifti_ct_slice, hu_min=20, hu_max=1300,
+                                            verbose=False)
+        assert mask_brain.sum() < mask_with_skull.sum()
 
-    def test_isles24_lesion_has_content(self, isles24_lesion):
-        """Lesion mask should have lesion voxels at slice 37."""
-        assert isles24_lesion.sum() > 1000
-
-    def test_isles24_brain_mask_from_cbf(self, isles24_cbf):
-        """Brain mask derived from CBF should be a single connected region."""
+    def test_nifti_ct_mask_is_contiguous(self, nifti_ct_slice):
+        """Brain mask should be a single connected component."""
+        mask = create_brain_mask(nifti_ct_slice, verbose=False)
         from scipy import ndimage
-        brain = isles24_cbf > 0
-        brain = ndimage.binary_fill_holes(brain)
-        labeled, n = ndimage.label(brain)
-        if n > 1:
-            sizes = ndimage.sum(brain, labeled, range(1, n + 1))
-            largest = np.argmax(sizes) + 1
-            brain = labeled == largest
-            brain = ndimage.binary_fill_holes(brain)
-        labeled2, n2 = ndimage.label(brain)
-        assert n2 == 1, f"Expected 1 component after cleanup, got {n2}"
+        labeled, n = ndimage.label(mask)
+        assert n == 1, f"Expected 1 component, got {n}"
 
-    def test_isles24_lesion_within_brain(self, isles24_cbf, isles24_lesion):
-        """Lesion should be mostly within the brain region."""
-        from scipy import ndimage
-        brain = isles24_cbf > 0
-        brain = ndimage.binary_fill_holes(brain)
-        labeled, n = ndimage.label(brain)
-        if n > 1:
-            sizes = ndimage.sum(brain, labeled, range(1, n + 1))
-            largest = np.argmax(sizes) + 1
-            brain = labeled == largest
-            brain = ndimage.binary_fill_holes(brain)
-        lesion_in_brain = (isles24_lesion > 0) & brain
-        total_lesion = (isles24_lesion > 0).sum()
-        overlap = lesion_in_brain.sum() / total_lesion if total_lesion > 0 else 0
-        assert overlap > 0.90, f"Only {overlap:.1%} of lesion is within brain"
+    def test_nifti_ct_hu_range_sanity(self, nifti_ct_slice):
+        """CT slice HU values should span air to bone."""
+        assert nifti_ct_slice.min() < 0, "CT should have negative HU (air)"
+        assert nifti_ct_slice.max() > 80, "CT should have values above 80 HU (bone)"
 
-    def test_isles24_data_shapes_consistent(self):
-        """All ISLES24 maps should have the same spatial dimensions."""
-        if not _have_isles24():
-            pytest.skip("ISLES24 sample data not available")
+    def test_nifti_ct_reproducibility(self, nifti_ct_slice):
+        """Same input should always produce the same mask."""
+        mask1 = create_brain_mask(nifti_ct_slice, verbose=False)
+        mask2 = create_brain_mask(nifti_ct_slice, verbose=False)
+        np.testing.assert_array_equal(mask1, mask2)
+
+    def test_nifti_ct_multiple_slices(self):
+        """Mask should work on multiple slices from the volume."""
+        if not _have_nifti_ct():
+            pytest.skip("Public CT NIfTI not available")
         import nibabel as nib
-        shapes = []
-        for name in ['cbf', 'cbv', 'tmax', 'lesion']:
-            data = nib.load(os.path.join(ISLES24_DIR, f'{name}.nii.gz')).get_fdata()
-            shapes.append(data.shape)
-        assert all(s == shapes[0] for s in shapes), f"Shapes differ: {shapes}"
+        data = nib.load(NIFTI_CT_PATH).get_fdata()
+        for z in [140, 157, 175]:
+            sl = np.rot90(data[:, :, z])
+            mask = create_brain_mask(sl, verbose=False)
+            assert mask.sum() > 1000, f"Slice {z} should have brain voxels"
 
-    def test_isles24_cbf_reasonable_range(self, isles24_cbf):
-        """CBF values should be in a physiologically reasonable range."""
-        nonzero = isles24_cbf[isles24_cbf > 0]
-        assert nonzero.mean() < 200, f"Mean CBF {nonzero.mean():.1f} seems too high"
-        assert nonzero.mean() > 1, f"Mean CBF {nonzero.mean():.1f} seems too low"
-
-    def test_isles24_version_import(self):
+    def test_version_import(self):
         """Package should expose __version__."""
         from ct_brain_mask import __version__
         assert __version__
