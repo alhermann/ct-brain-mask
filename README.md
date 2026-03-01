@@ -40,11 +40,19 @@ The [20, 80] window captures all brain parenchyma and blood while naturally excl
 
 ## Installation
 
+From [PyPI](https://pypi.org/project/ct-brain-mask/) (once published):
+
 ```bash
 pip install ct-brain-mask
 ```
 
-Or from source:
+From [TestPyPI](https://test.pypi.org/project/ct-brain-mask/) (current):
+
+```bash
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ ct-brain-mask
+```
+
+From source:
 
 ```bash
 git clone https://github.com/hermanndetz/ct-brain-mask.git
@@ -107,12 +115,6 @@ python examples/compare_methods.py \
 
 Generates the 4-panel comparison figure shown above.
 
-## Use Cases
-
-- **CT Perfusion (CTP):** Define the region of interest for perfusion parameter extraction (CBF, CBV, MTT, Tmax)
-- **AIF extraction:** Restrict arterial input function peak detection to brain tissue, avoiding signal dilution from non-enhancing skull
-- **Stroke imaging:** Quick brain segmentation for automated perfusion analysis pipelines
-
 ## Dependencies
 
 - Python >= 3.8
@@ -120,10 +122,6 @@ Generates the 4-panel comparison figure shown above.
 - scipy
 
 Optional (for examples): matplotlib, pydicom
-
-## Background
-
-This algorithm was developed as part of a CT perfusion research project combining physics-informed neural networks (PINNs) with deconvolution-based perfusion imaging. The approach is inspired by the brain masking strategy in the [Pingo](https://github.com/hermanndetz) project for CTP preprocessing.
 
 ## License
 

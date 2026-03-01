@@ -1,11 +1,12 @@
 """
 CT Brain Mask — HU-threshold-based brain segmentation for CT perfusion imaging.
 
-Algorithm (based on Project Pingo / b_mask.py):
+Algorithm:
   1. Threshold baseline CT at brain parenchyma HU range (default 20-80 HU)
      - Excludes air (<0 HU), fat/CSF (<20 HU), bone/skull (>80 HU)
   2. Fill holes (ventricles, sulci)
   3. Keep only the largest connected component (the brain)
+  4. Final hole fill after component selection
 
 Dependencies: numpy, scipy.ndimage
 """

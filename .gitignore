@@ -6,3 +6,5 @@ build/
 .eggs/
 *.so
 .venv/
+.pytest_cache/
+.DS_Store
