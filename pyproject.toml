@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "ct-brain-mask"
+version = "0.1.0"
+description = "HU-threshold-based brain segmentation for CT perfusion imaging"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.8"
+dependencies = [
+    "numpy",
+    "scipy",
+]
+
+[project.optional-dependencies]
+examples = [
+    "matplotlib",
+    "pydicom",
+]
