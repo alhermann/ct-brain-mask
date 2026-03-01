@@ -6,6 +6,8 @@ Simple, robust brain segmentation for non-contrast CT and dynamic CT images usin
 
 ![Brain mask comparison](examples/brain_mask_demo.png)
 
+*Public CT scan from [niivue-images](https://github.com/neurolabusc/niivue-images) (CT_Philips, slice 157).*
+
 | Method | Voxels | Coverage | Skull included? |
 |--------|--------|----------|-----------------|
 | **HU [20, 80] (ours)** | 19,218 | 44.8% | No |
