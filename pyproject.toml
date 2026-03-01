@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ct-brain-mask"
-version = "0.3.3"
+version = "0.4.1"
 description = "HU-threshold-based brain segmentation for CT and dynamic CT imaging"
 readme = "README.md"
 license = "MIT"
@@ -31,6 +31,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+io = [
+    "pydicom",
+    "nibabel",
+]
 examples = [
     "matplotlib",
     "pydicom",
@@ -39,6 +43,7 @@ examples = [
 test = [
     "pytest",
     "pydicom",
+    "nibabel",
 ]
 
 [project.urls]

@@ -79,9 +79,74 @@ from ct_brain_mask import create_brain_mask_4d
 mask = create_brain_mask_4d(volume_4d, slice_idx=8, n_baseline=3)
 ```
 
+### Robustness parameters
+
+For noisy or artifact-heavy CT data, optional pre-processing improves mask quality:
+
+```python
+# Median filter to reduce noise (kernel size 3 or 5)
+mask = create_brain_mask(ct_2d, median_size=3)
+
+# Morphological opening to clean small fragments after thresholding
+mask = create_brain_mask(ct_2d, opening=True)          # 1 iteration
+mask = create_brain_mask(ct_2d, opening=3)             # 3 iterations
+
+# Combined — best for noisy data with motion artifacts
+mask = create_brain_mask(ct_2d, median_size=5, opening=2)
+```
+
+Default values (`median_size=None`, `opening=False`) reproduce the original pipeline exactly.
+
+### Robustness results
+
+![Robustness comparison](examples/robustness_comparison.png)
+
+*Real CT brain (CT_Philips, slice 157) with clinically realistic artifacts. Overlay: green = true positive, red = false positive, blue = false negative. Simulation methods: **sinogram-domain** (metal streaks via Radon transform), **physically accurate image-domain** (noise, cupping, rings), **multi-step approximation** (motion, photon starvation).*
+
+![Dice score chart](examples/robustness_dice_chart.png)
+
+| Condition | Dice | Robust params | Simulation |
+|-----------|------|---------------|------------|
+| Noise σ=5 | 0.997 | `median_size=3` | Physically accurate |
+| Noise σ=15 | 0.994 | `median_size=3` | Physically accurate |
+| Noise σ=30 | 0.990 | `median_size=3` | Physically accurate |
+| Motion 2px+1° | 0.988 | `median_size=3, opening=True` | Multi-step trajectory |
+| Motion 4px+2° | 0.979 | `median_size=3, opening=True` | Multi-step trajectory |
+| Motion 6px+3° | 0.969 | `median_size=3, opening=True` | Multi-step trajectory |
+| Rings 1×30HU | 0.997 | `median_size=5` | Physically accurate |
+| Rings 3×30HU | 0.997 | `median_size=5` | Physically accurate |
+| Rings 5×30HU | 0.996 | `median_size=5` | Physically accurate |
+| Cupping 10 HU | 0.994 | `median_size=3` | Physically accurate |
+| Cupping 20 HU | 0.991 | `median_size=3` | Physically accurate |
+| Cupping 40 HU | 0.986 | `median_size=3` | Physically accurate |
+| Starvation 20 HU | 0.998 | `median_size=3` | Anatomy-guided |
+| Starvation 40 HU | 0.998 | `median_size=3` | Anatomy-guided |
+| Metal Streaks | 0.979 | `median_size=7` | Sinogram-domain (Radon) |
+| Combined | 0.987 | `median_size=3, opening=2` | Stress test |
+
+All 16 conditions maintain Dice > 0.96 with appropriate robust params. Windmill/helical artifacts are not simulated (require 3D multi-row detector geometry).
+
+### Loading DICOM and NIfTI files
+
+Install IO dependencies with `pip install ct-brain-mask[io]` (requires `pydicom` and `nibabel`):
+
+```python
+from ct_brain_mask import load_dicom_file, load_dicom_dir, load_nifti
+
+# Single DICOM file → (H, W) in HU
+img = load_dicom_file("path/to/file.dcm")
+mask = create_brain_mask(img)
+
+# Directory of DICOMs → (S, H, W) structural or (S, H, W, T) dynamic
+volume = load_dicom_dir("path/to/dicom_dir/")
+
+# NIfTI file → numpy array
+data = load_nifti("path/to/brain.nii.gz")
+```
+
 ### API
 
-**`create_brain_mask(ct_baseline_2d, hu_min=20, hu_max=80, verbose=True)`**
+**`create_brain_mask(ct_baseline_2d, hu_min=20, hu_max=80, median_size=None, opening=False, verbose=True)`**
 
 Create a binary brain mask from a 2D CT image in Hounsfield Units.
 
@@ -90,11 +155,13 @@ Create a binary brain mask from a 2D CT image in Hounsfield Units.
 | `ct_baseline_2d` | ndarray (H, W) | required | Baseline CT image in HU |
 | `hu_min` | float | 20 | Lower HU threshold |
 | `hu_max` | float | 80 | Upper HU threshold |
+| `median_size` | int or None | None | Median filter kernel size for noise reduction |
+| `opening` | bool or int | False | Morphological opening iterations to clean fragments |
 | `verbose` | bool | True | Print mask statistics |
 
 Returns: `ndarray (H, W)`, dtype `bool`
 
-**`create_brain_mask_4d(volume_4d, slice_idx, hu_min=20, hu_max=80, n_baseline=3, verbose=True)`**
+**`create_brain_mask_4d(volume_4d, slice_idx, hu_min=20, hu_max=80, n_baseline=3, median_size=None, opening=False, verbose=True)`**
 
 Convenience wrapper for 4D dynamic CT volumes. Averages the first `n_baseline` frames (pre-contrast) to compute a stable baseline, then calls `create_brain_mask`.
 
@@ -103,8 +170,16 @@ Convenience wrapper for 4D dynamic CT volumes. Averages the first `n_baseline` f
 | `volume_4d` | ndarray (S, H, W, T) | required | 4D dynamic CT volume in HU |
 | `slice_idx` | int | required | Slice index to mask |
 | `n_baseline` | int | 3 | Pre-contrast frames to average |
+| `median_size` | int or None | None | Median filter kernel size |
+| `opening` | bool or int | False | Morphological opening iterations |
 
 Returns: `ndarray (H, W)`, dtype `bool`
+
+**`load_dicom_file(filepath)`** — Load a single DICOM file → `(H, W)` in HU.
+
+**`load_dicom_dir(dicom_dir)`** — Load all DICOMs in a directory → `(S, H, W)` or `(S, H, W, T)` in HU.
+
+**`load_nifti(filepath)`** — Load a NIfTI file → numpy array.
 
 ## Dependencies
 
@@ -112,7 +187,7 @@ Returns: `ndarray (H, W)`, dtype `bool`
 - numpy
 - scipy
 
-Optional (for examples): matplotlib, pydicom, nibabel
+Optional: `pip install ct-brain-mask[io]` for DICOM/NIfTI loading (pydicom, nibabel)
 
 ## License
 
