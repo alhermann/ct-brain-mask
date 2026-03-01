@@ -1,18 +1,12 @@
 # ct-brain-mask
 
-Simple, robust brain segmentation for non-contrast and CT perfusion (CTP) images using Hounsfield Unit thresholding and morphological operations. No deep learning, no training data — just numpy and scipy.
+Simple, robust brain segmentation for non-contrast CT and dynamic CT images using Hounsfield Unit thresholding and morphological operations. No deep learning, no training data — just numpy and scipy.
 
-## Mask Comparison
+## Example: Brain Masking for Dynamic CT Analysis
 
-![Mask Comparison](examples/mask_comparison.png)
+![Brain mask example — ISLES 2024](examples/brain_mask_isles24.png)
 
-| Method | Voxels | Coverage | Skull included? |
-|--------|--------|----------|-----------------|
-| **HU [20, 80] (ours)** | 89,527 | 34.2% | No |
-| HU [20, 1300] | 123,681 | 47.2% | Yes |
-| HU > 0 | 126,917 | 48.4% | Yes |
-
-The [20, 80] HU window cleanly isolates brain parenchyma. Broader thresholds include skull and bone, which is problematic for perfusion analysis (e.g., diluting mean enhancement and breaking arterial input function extraction).
+*Perfusion data from the [ISLES 2024](https://isles-24.grand-challenge.org/) public dataset (sub-stroke0014, slice 37). Left to right: raw Tmax map, brain mask isolating brain tissue, masked Tmax, and lesion overlay. Brain masking enables per-voxel perfusion analysis by excluding non-brain tissue.*
 
 ## Algorithm
 
@@ -72,7 +66,7 @@ mask = create_brain_mask(ct_baseline_2d)
 # Custom thresholds
 mask = create_brain_mask(ct_baseline_2d, hu_min=10, hu_max=100)
 
-# From a 4D CT perfusion volume (slices, H, W, time)
+# From a 4D dynamic CT volume (slices, H, W, time)
 from ct_brain_mask import create_brain_mask_4d
 mask = create_brain_mask_4d(volume_4d, slice_idx=8, n_baseline=3)
 ```
@@ -94,26 +88,15 @@ Returns: `ndarray (H, W)`, dtype `bool`
 
 **`create_brain_mask_4d(volume_4d, slice_idx, hu_min=20, hu_max=80, n_baseline=3, verbose=True)`**
 
-Convenience wrapper for 4D CT perfusion volumes. Averages the first `n_baseline` frames (pre-contrast) to compute a stable baseline, then calls `create_brain_mask`.
+Convenience wrapper for 4D dynamic CT volumes. Averages the first `n_baseline` frames (pre-contrast) to compute a stable baseline, then calls `create_brain_mask`.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `volume_4d` | ndarray (S, H, W, T) | required | 4D CTP volume in HU |
+| `volume_4d` | ndarray (S, H, W, T) | required | 4D dynamic CT volume in HU |
 | `slice_idx` | int | required | Slice index to mask |
 | `n_baseline` | int | 3 | Pre-contrast frames to average |
 
 Returns: `ndarray (H, W)`, dtype `bool`
-
-## Example: Compare Masking Methods
-
-```bash
-python examples/compare_methods.py \
-    --dicom_dir /path/to/DICOM/CTP \
-    --slice_idx 8 \
-    --output examples/mask_comparison.png
-```
-
-Generates the 4-panel comparison figure shown above.
 
 ## Dependencies
 
@@ -121,7 +104,7 @@ Generates the 4-panel comparison figure shown above.
 - numpy
 - scipy
 
-Optional (for examples): matplotlib, pydicom
+Optional (for examples): matplotlib, pydicom, nibabel
 
 ## License
 

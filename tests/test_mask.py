@@ -1,5 +1,7 @@
 """Unit tests for ct_brain_mask."""
 
+import os
+
 import numpy as np
 import pytest
 
@@ -190,7 +192,7 @@ class TestCreateBrainMask4D:
     """Tests for the 4D convenience wrapper."""
 
     def _make_volume(self, shape=(5, 128, 128, 10), brain_value=35.0):
-        """Create a synthetic 4D CTP volume."""
+        """Create a synthetic 4D dynamic CT volume."""
         vol = np.full(shape, -1000.0)
         s, h, w, t = shape
         cy, cx = h // 2, w // 2
@@ -261,7 +263,6 @@ DICOM_DIR = "/Users/hermann/Desktop/SPPINNs/DICOM/0000413A"
 
 def _load_dicom_slice(dicom_dir):
     """Load a single DICOM file and convert to HU."""
-    import os
     try:
         import pydicom
     except ImportError:
@@ -281,7 +282,6 @@ def _load_dicom_slice(dicom_dir):
 
 def _load_dicom_volume(dicom_dir, max_slices=5):
     """Load multiple DICOM files as a pseudo-4D volume for testing."""
-    import os
     try:
         import pydicom
     except ImportError:
@@ -307,7 +307,6 @@ def _load_dicom_volume(dicom_dir, max_slices=5):
 @pytest.fixture
 def dicom_image():
     """Load a single DICOM slice in HU."""
-    import os
     if not os.path.isdir(DICOM_DIR):
         pytest.skip("DICOM data not available")
     img = _load_dicom_slice(DICOM_DIR)
@@ -319,7 +318,6 @@ def dicom_image():
 @pytest.fixture
 def dicom_volume():
     """Load DICOM files as a pseudo-4D volume."""
-    import os
     if not os.path.isdir(DICOM_DIR):
         pytest.skip("DICOM data not available")
     vol = _load_dicom_volume(DICOM_DIR)
@@ -383,3 +381,132 @@ class TestWithDICOM:
         mask1 = create_brain_mask(dicom_image, verbose=False)
         mask2 = create_brain_mask(dicom_image, verbose=False)
         np.testing.assert_array_equal(mask1, mask2)
+
+
+# ---------------------------------------------------------------------------
+# Tests with ISLES 2024 public NIfTI data (skipped if data not available)
+# ---------------------------------------------------------------------------
+
+ISLES24_DIR = os.path.join(os.path.dirname(__file__),
+                           '..', 'examples', 'isles24_sample')
+
+
+def _have_isles24():
+    """Check if ISLES24 sample NIfTI files are available."""
+    return os.path.isfile(os.path.join(ISLES24_DIR, 'cbf.nii.gz'))
+
+
+@pytest.fixture
+def isles24_cbf():
+    """Load ISLES24 CBF map, slice 37."""
+    if not _have_isles24():
+        pytest.skip("ISLES24 sample data not available")
+    import nibabel as nib
+    data = nib.load(os.path.join(ISLES24_DIR, 'cbf.nii.gz')).get_fdata()
+    return data[:, :, 37]
+
+
+@pytest.fixture
+def isles24_tmax():
+    """Load ISLES24 Tmax map, slice 37."""
+    if not _have_isles24():
+        pytest.skip("ISLES24 sample data not available")
+    import nibabel as nib
+    data = nib.load(os.path.join(ISLES24_DIR, 'tmax.nii.gz')).get_fdata()
+    return data[:, :, 37]
+
+
+@pytest.fixture
+def isles24_lesion():
+    """Load ISLES24 lesion mask, slice 37."""
+    if not _have_isles24():
+        pytest.skip("ISLES24 sample data not available")
+    import nibabel as nib
+    data = nib.load(os.path.join(ISLES24_DIR, 'lesion.nii.gz')).get_fdata()
+    return data[:, :, 37]
+
+
+class TestWithISLES24:
+    """Tests using ISLES 2024 public perfusion data."""
+
+    def test_isles24_files_loadable(self):
+        """All ISLES24 NIfTI files should be loadable."""
+        if not _have_isles24():
+            pytest.skip("ISLES24 sample data not available")
+        import nibabel as nib
+        for name in ['cbf', 'cbv', 'tmax', 'lesion']:
+            img = nib.load(os.path.join(ISLES24_DIR, f'{name}.nii.gz'))
+            data = img.get_fdata()
+            assert data.ndim == 3
+            assert data.shape[0] > 0
+
+    def test_isles24_cbf_has_brain_region(self, isles24_cbf):
+        """CBF map should have a non-zero brain region."""
+        brain_region = isles24_cbf > 0
+        assert brain_region.sum() > 10000, "CBF should show brain perfusion"
+
+    def test_isles24_tmax_has_data(self, isles24_tmax):
+        """Tmax map should have a meaningful value range."""
+        assert isles24_tmax.max() > 0, "Tmax should have positive values"
+
+    def test_isles24_lesion_is_binary(self, isles24_lesion):
+        """Lesion mask should be binary (0 or 1)."""
+        unique = np.unique(isles24_lesion)
+        assert set(unique).issubset({0.0, 1.0})
+
+    def test_isles24_lesion_has_content(self, isles24_lesion):
+        """Lesion mask should have lesion voxels at slice 37."""
+        assert isles24_lesion.sum() > 1000
+
+    def test_isles24_brain_mask_from_cbf(self, isles24_cbf):
+        """Brain mask derived from CBF should be a single connected region."""
+        from scipy import ndimage
+        brain = isles24_cbf > 0
+        brain = ndimage.binary_fill_holes(brain)
+        labeled, n = ndimage.label(brain)
+        if n > 1:
+            sizes = ndimage.sum(brain, labeled, range(1, n + 1))
+            largest = np.argmax(sizes) + 1
+            brain = labeled == largest
+            brain = ndimage.binary_fill_holes(brain)
+        labeled2, n2 = ndimage.label(brain)
+        assert n2 == 1, f"Expected 1 component after cleanup, got {n2}"
+
+    def test_isles24_lesion_within_brain(self, isles24_cbf, isles24_lesion):
+        """Lesion should be mostly within the brain region."""
+        from scipy import ndimage
+        brain = isles24_cbf > 0
+        brain = ndimage.binary_fill_holes(brain)
+        labeled, n = ndimage.label(brain)
+        if n > 1:
+            sizes = ndimage.sum(brain, labeled, range(1, n + 1))
+            largest = np.argmax(sizes) + 1
+            brain = labeled == largest
+            brain = ndimage.binary_fill_holes(brain)
+        lesion_in_brain = (isles24_lesion > 0) & brain
+        total_lesion = (isles24_lesion > 0).sum()
+        overlap = lesion_in_brain.sum() / total_lesion if total_lesion > 0 else 0
+        assert overlap > 0.90, f"Only {overlap:.1%} of lesion is within brain"
+
+    def test_isles24_data_shapes_consistent(self):
+        """All ISLES24 maps should have the same spatial dimensions."""
+        if not _have_isles24():
+            pytest.skip("ISLES24 sample data not available")
+        import nibabel as nib
+        shapes = []
+        for name in ['cbf', 'cbv', 'tmax', 'lesion']:
+            data = nib.load(os.path.join(ISLES24_DIR, f'{name}.nii.gz')).get_fdata()
+            shapes.append(data.shape)
+        assert all(s == shapes[0] for s in shapes), f"Shapes differ: {shapes}"
+
+    def test_isles24_cbf_reasonable_range(self, isles24_cbf):
+        """CBF values should be in a physiologically reasonable range."""
+        nonzero = isles24_cbf[isles24_cbf > 0]
+        assert nonzero.mean() < 200, f"Mean CBF {nonzero.mean():.1f} seems too high"
+        assert nonzero.mean() > 1, f"Mean CBF {nonzero.mean():.1f} seems too low"
+
+    def test_isles24_version_import(self):
+        """Package should expose __version__."""
+        from ct_brain_mask import __version__
+        assert __version__
+        assert isinstance(__version__, str)

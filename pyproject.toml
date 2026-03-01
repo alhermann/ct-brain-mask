@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ct-brain-mask"
-version = "0.1.0"
-description = "HU-threshold-based brain segmentation for CT and CT perfusion imaging"
+version = "0.2.0"
+description = "HU-threshold-based brain segmentation for CT and dynamic CT imaging"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.8"
@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
-keywords = ["ct", "brain", "mask", "segmentation", "perfusion", "hounsfield", "medical-imaging"]
+keywords = ["ct", "brain", "mask", "segmentation", "dynamic-ct", "perfusion", "hounsfield", "medical-imaging", "isles"]
 dependencies = [
     "numpy",
     "scipy",
@@ -34,6 +34,7 @@ dependencies = [
 examples = [
     "matplotlib",
     "pydicom",
+    "nibabel",
 ]
 test = [
     "pytest",

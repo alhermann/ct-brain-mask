@@ -8,3 +8,5 @@ build/
 .venv/
 .pytest_cache/
 .DS_Store
+# ISLES24 sample NIfTI data (downloaded for testing, not committed)
+examples/isles24_sample/*.nii.gz

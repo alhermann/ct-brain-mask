@@ -1,5 +1,5 @@
 """
-CT Brain Mask — HU-threshold-based brain segmentation for CT perfusion imaging.
+CT Brain Mask — HU-threshold-based brain segmentation for CT and dynamic CT imaging.
 
 Algorithm:
   1. Threshold baseline CT at brain parenchyma HU range (default 20-80 HU)
@@ -63,7 +63,7 @@ def create_brain_mask(ct_baseline_2d, hu_min=20, hu_max=80, verbose=True):
 def create_brain_mask_4d(volume_4d, slice_idx, hu_min=20, hu_max=80,
                          n_baseline=3, verbose=True):
     """
-    Create a brain mask from a 4D CT perfusion volume.
+    Create a brain mask from a 4D dynamic CT volume.
 
     Averages the first ``n_baseline`` frames (pre-contrast) to get a stable
     baseline image, then applies HU thresholding.
@@ -71,7 +71,7 @@ def create_brain_mask_4d(volume_4d, slice_idx, hu_min=20, hu_max=80,
     Parameters
     ----------
     volume_4d : np.ndarray, shape (S, H, W, T)
-        4D CT perfusion volume in HU (slices x height x width x time).
+        4D dynamic CT volume in HU (slices x height x width x time).
     slice_idx : int
         Which slice to mask.
     hu_min : float

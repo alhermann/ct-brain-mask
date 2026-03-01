@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Compare brain masking methods on a CT perfusion DICOM dataset.
+Compare brain masking methods on a dynamic CT DICOM dataset.
 
 Generates a 4-panel figure:
   1. Baseline CT image
@@ -27,7 +27,7 @@ from ct_brain_mask import create_brain_mask
 
 
 def load_dicom_slice(dicom_dir, slice_idx=8, n_baseline=3):
-    """Load a single baseline CT slice from a DICOM CTP directory."""
+    """Load a single baseline CT slice from a DICOM dynamic CT directory."""
     files = glob.glob(os.path.join(dicom_dir, '*'))
     if not files:
         raise FileNotFoundError(f"No files in {dicom_dir}")
@@ -67,7 +67,7 @@ def load_dicom_slice(dicom_dir, slice_idx=8, n_baseline=3):
 
 def main():
     parser = argparse.ArgumentParser(description="Compare brain mask methods")
-    parser.add_argument('--dicom_dir', required=True, help="DICOM CTP directory")
+    parser.add_argument('--dicom_dir', required=True, help="DICOM dynamic CT directory")
     parser.add_argument('--slice_idx', type=int, default=8, help="Slice index")
     parser.add_argument('--output', default='examples/mask_comparison.png',
                         help="Output image path")
