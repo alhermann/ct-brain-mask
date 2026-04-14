@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ct-brain-mask"
-version = "0.4.2"
-description = "HU-threshold-based brain segmentation for CT and dynamic CT imaging"
+version = "0.6.0"
+description = "Brain segmentation and ventricle extraction for CT and dynamic CT imaging"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.8"
