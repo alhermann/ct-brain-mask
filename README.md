@@ -18,7 +18,7 @@ The [20, 80] HU window cleanly isolates brain parenchyma. Broader thresholds inc
 
 ## Brain Mask + Ventricle Segmentation
 
-![Ventricle segmentation demo](examples/ventricle_demo.png)
+![Ventricle segmentation demo](examples/ventricle_demo_v2.png)
 
 *Public CT scan from [ISLES 2024](https://isles-24.grand-challenge.org/). Top: raw CT. Middle: v2 robust brain mask (green). Bottom: brain mask + ventricle/CSF extraction (blue fill, cyan boundary).*
 
